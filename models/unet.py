@@ -22,50 +22,48 @@ is important to select the input tile size such that all 2x2 max-pooling operati
 are applied to a layer with an even x- and y-size.
 """
 
-# class ConvBlock():
-#    [(W−K+2P)/S]+1
-#    W = width
-#    K = kernel size
-#    P = padding
-#    S = stride
-   
-#    572 - 3 + 2 (0) / 1 + 1
-   
-# def createLHSConvBlock(in_channels: int, out_channels: int):
-#     # Inputshape = (3, 572, 572)
-#     num_channel, height, width = input_shape
-#     nn.Conv2d(num_channel, 64, (3, 3), stride=1, padding=0)
-#     relu = nn.ReLU(inplace=False)
-#     nn.Conv2d(64, 64, (3, 3), stride=1, padding=0)
-#     relu = nn.ReLU(inplace=False)
-    
-    
-# def createMaxPoolLayer():
-#     return nn.MaxPool2d((2, 2), stride=2) # Downsampling
     
     
 
 class UNet(nn.Module):
-    def __init__(self):
+    def __init__(self, out_channels):
         super(UNet, self).__init__()
         
         
-        self.encoder1_1 = nn.Conv2d(3, 64, (3, 3), stride=1, padding=0)
-        self.encoder1_2 = nn.Conv2d(64, 64, (3, 3), stride=1, padding=0)
+        self.encoder1_1 = nn.Conv2d(3, 64, (3, 3), stride=1, padding=1)
+        self.encoder1_2 = nn.Conv2d(64, 64, (3, 3), stride=1, padding=1)
         
-        self.encoder2_1 = nn.Conv2d(64, 128, (3, 3), stride=1, padding=0)
-        self.encoder2_2 = nn.Conv2d(128, 128, (3, 3), stride=1, padding=0)
+        self.encoder2_1 = nn.Conv2d(64, 128, (3, 3), stride=1, padding=1)
+        self.encoder2_2 = nn.Conv2d(128, 128, (3, 3), stride=1, padding=1)
         
-        self.encoder3_1 = nn.Conv2d(128, 256, (3, 3), stride=1, padding=0)
-        self.encoder3_2 = nn.Conv2d(256, 256, (3, 3), stride=1, padding=0)
+        self.encoder3_1 = nn.Conv2d(128, 256, (3, 3), stride=1, padding=1)
+        self.encoder3_2 = nn.Conv2d(256, 256, (3, 3), stride=1, padding=1)
         
-        self.encoder4_1 = nn.Conv2d(256, 512, (3, 3), stride=1, padding=0)
-        self.encoder4_2 = nn.Conv2d(512, 512, (3, 3), stride=1, padding=0)
+        self.encoder4_1 = nn.Conv2d(256, 512, (3, 3), stride=1, padding=1)
+        self.encoder4_2 = nn.Conv2d(512, 512, (3, 3), stride=1, padding=1)
         
-        self.decoder1_1 = nn.Conv2d(512, 1024, (3, 3), stride=1, padding=0)
-        self.decoder1_2 = nn.Conv2d(1024, 1024, (3, 3), stride=1, padding=0)
+        self.decoder1_1 = nn.Conv2d(512, 1024, (3, 3), stride=1, padding=1)
+        self.decoder1_2 = nn.Conv2d(1024, 1024, (3, 3), stride=1, padding=1)
+        self.upconv1 = nn.ConvTranspose2d(1024, 512, (2, 2), stride=2)
         
-        self.relu = nn.ReLU(inplace=False)
+        self.decoder2_1 = nn.Conv2d(1024, 512, (3, 3), stride=1, padding=1)
+        self.decoder2_2 = nn.Conv2d(512, 512, (3, 3), stride=1, padding=1)
+        self.upconv2 = nn.ConvTranspose2d(512, 256, (2, 2), stride=2)
+        
+        self.decoder3_1 = nn.Conv2d(512, 256, (3, 3), stride=1, padding=1)
+        self.decoder3_2 = nn.Conv2d(256, 256, (3, 3), stride=1, padding=1)
+        self.upconv3 = nn.ConvTranspose2d(256, 128, (2, 2), stride=2)
+        
+        self.decoder4_1 = nn.Conv2d(256, 128, (3, 3), stride=1, padding=1)
+        self.decoder4_2 = nn.Conv2d(128, 128, (3, 3), stride=1, padding=1)
+        self.upconv4 = nn.ConvTranspose2d(128, 64, (2, 2), stride=2)
+        
+        self.decoder5_1 = nn.Conv2d(128, 64, (3, 3), stride=1, padding=1)
+        self.decoder5_2 = nn.Conv2d(64, 64, (3, 3), stride=1, padding=1)
+        self.finalconv = nn.Conv2d(64, out_channels, (1, 1), stride=1, padding=0)
+        
+        
+        self.relu = nn.ReLU()
         self.maxpool = nn.MaxPool2d((2, 2), stride=2) # Downsampling
         
     def createLHSBlock1(self, x):
@@ -73,7 +71,6 @@ class UNet(nn.Module):
         x = self.relu(x)
         x = self.encoder1_2(x)
         x = self.relu(x)
-        x = self.maxpool(x)
         return x
     
     def createLHSBlock2(self, x):
@@ -81,7 +78,6 @@ class UNet(nn.Module):
         x = self.relu(x)
         x = self.encoder2_2(x)
         x = self.relu(x)
-        x = self.maxpool(x)
         return x
 
     def createLHSBlock3(self, x):
@@ -89,7 +85,6 @@ class UNet(nn.Module):
         x = self.relu(x)
         x = self.encoder3_2(x)
         x = self.relu(x)
-        x = self.maxpool(x)
         return x
 
     def createLHSBlock4(self, x):
@@ -97,13 +92,40 @@ class UNet(nn.Module):
         x = self.relu(x)
         x = self.encoder4_2(x)
         x = self.relu(x)
-        x = self.maxpool(x)
         return x
     
-    def createRHSBlock1(self, x):
+    def createRHSBlock1(self, x): # Lowest layer
         x = self.decoder1_1(x)
         x = self.relu(x)
         x = self.decoder1_2(x)
+        x = self.relu(x)
+        return x
+    
+    def createRHSBlock2(self, x):
+        x = self.decoder2_1(x)
+        x = self.relu(x)
+        x = self.decoder2_2(x)
+        x = self.relu(x)
+        return x
+    
+    def createRHSBlock3(self, x):
+        x = self.decoder3_1(x)
+        x = self.relu(x)
+        x = self.decoder3_2(x)
+        x = self.relu(x)
+        return x
+    
+    def createRHSBlock4(self, x):
+        x = self.decoder4_1(x)
+        x = self.relu(x)
+        x = self.decoder4_2(x)
+        x = self.relu(x)
+        return x
+    
+    def createRHSBlock5(self, x):
+        x = self.decoder5_1(x)
+        x = self.relu(x)
+        x = self.decoder5_2(x)
         x = self.relu(x)
         return x
         
@@ -117,6 +139,14 @@ class UNet(nn.Module):
         a 2x2 max pooling operation with stride 2 for downsampling.
         At each downsampling step we double the number of feature channels. 
         """
+        lhs1 = self.createLHSBlock1(x)
+        lhsp1 = self.maxpool(lhs1)
+        lhs2 = self.createLHSBlock2(lhsp1)
+        lhsp2 = self.maxpool(lhs2)
+        lhs3 = self.createLHSBlock3(lhsp2)
+        lhsp3 = self.maxpool(lhs3)
+        lhs4 = self.createLHSBlock4(lhsp3)
+        lhsp4 = self.maxpool(lhs4)
         
         
         
@@ -127,13 +157,31 @@ class UNet(nn.Module):
         a concatenation with the correspondingly cropped feature map from the contracting path, and 
         two 3x3 convolutions, each followed by a ReLU.
         """
+        rhs1 = self.createRHSBlock1(lhsp4)
+        rhsp1 = self.upconv1(rhs1)
+        rhsc1 = torch.cat([lhs4, rhsp1], dim=1) # Concat along the channels dimension
+
+        rhs2 = self.createRHSBlock2(rhsc1)
+        rhsp2 = self.upconv2(rhs2)
+        rhsc2 = torch.cat([lhs3, rhsp2], dim=1) # Concat along the channels dimension
+
+        rhs3 = self.createRHSBlock3(rhsc2)
+        rhsp3 = self.upconv3(rhs3)
+        rhsc3 = torch.cat([lhs2, rhsp3], dim=1) # Concat along the channels dimension
+
+        rhs4 = self.createRHSBlock4(rhsc3)
+        rhsp4 = self.upconv4(rhs4)
+        rhsc4 = torch.cat([lhs1, rhsp4], dim=1) # Concat along the channels dimension
         
+        rhs5 = self.createRHSBlock5(rhsc4)
+
         
         # Last Layer
         """
         At the final layer a 1x1 convolution is used to map each 64-component feature vector to the desired number of classes. 
         In total the network has 23 convolutional layers.
         """
+        output = self.finalconv(rhs5)
         
         
-        return x
+        return output
