@@ -272,9 +272,9 @@ def calc_loss(pred, target, metrics, bce_weight=0.5):
 def print_metrics(metrics, epoch_samples, phase):
     outputs = []
     for k in metrics.keys():
-        outputs.append("{}: {:4f}".format(k, metrics[k] / epoch_samples))
+        outputs.append("{}: {:4f}".format(k.upper(), metrics[k] / epoch_samples))
 
-    print("{}: {}".format(phase, ", ".join(outputs)))
+    print("{}: {}".format(phase.capitalize(), ", ".join(outputs)))
 
 
 def train_model(model, optimizer, scheduler, device, num_epochs=25):
@@ -328,14 +328,15 @@ def train_model(model, optimizer, scheduler, device, num_epochs=25):
 
             # deep copy the model
             if phase == 'val' and epoch_loss < best_loss:
-                print("saving best model")
+                print("Saving best model")
                 best_loss = epoch_loss
                 best_model_wts = copy.deepcopy(model.state_dict())
 
         time_elapsed = time.time() - since
         print('{:.0f}m {:.0f}s'.format(time_elapsed // 60, time_elapsed % 60))
+        print()
 
-    print('Best val loss: {:4f}'.format(best_loss))
+    print('Best Val loss: {:4f}'.format(best_loss))
 
     # load best model weights
     model.load_state_dict(best_model_wts)
